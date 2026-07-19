@@ -1,0 +1,13 @@
+# Ignore all files by default
+**/*
+
+# Allow App Script configuration
+!appsscript.json
+
+# Allow only Apps Script code and template files
+!*.gs
+!*.html
+
+# Explicitly ignore compiled files and utility scripts
+compiler.js
+github_index.html

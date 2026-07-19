@@ -1,0 +1,42 @@
+<div class="sidebar d-none d-md-block">
+  <div class="p-3 text-center border-bottom">
+    <h5 class="text-primary fw-bold mb-0">ระบบติดตามกำไร กบข.</h5>
+  </div>
+  <div class="nav flex-column mt-3">
+    <a href="#dashboard" class="nav-link"><i class="bi bi-house-door me-2"></i> แดชบอร์ด</a>
+    <a href="#upload" class="nav-link user-only"><i class="bi bi-cloud-upload me-2"></i> อัปโหลดข้อมูล กบข.</a>
+    <a href="#data" class="nav-link user-only"><i class="bi bi-table me-2"></i> จัดการข้อมูล กบข.</a>
+    <a href="#member" class="nav-link admin-only"><i class="bi bi-people me-2"></i> จัดการสมาชิก</a>
+    <a href="#setting" class="nav-link superadmin-only"><i class="bi bi-gear me-2"></i> ตั้งค่าระบบ</a>
+    <a href="#" class="nav-link text-danger mt-5" onclick="doLogout()"><i class="bi bi-box-arrow-right me-2"></i> ออกจากระบบ</a>
+  </div>
+</div>
+
+<div class="bottom-nav d-md-none d-flex justify-content-around">
+  <a href="#dashboard" class="nav-item nav-link"><i class="bi bi-house-door"></i> แดชบอร์ด</a>
+  <a href="#upload" class="nav-item nav-link user-only"><i class="bi bi-cloud-upload"></i> อัปโหลด</a>
+  <a href="#data" class="nav-item nav-link user-only"><i class="bi bi-table"></i> ประวัติ</a>
+  <a href="#member" class="nav-item nav-link admin-only"><i class="bi bi-people"></i> สมาชิก</a>
+  <a href="#" class="nav-item nav-link" onclick="toggleMobileMenu()"><i class="bi bi-list"></i> เมนู</a>
+</div>
+
+<div class="offcanvas offcanvas-end" tabindex="-1" id="mobileMenu">
+  <div class="offcanvas-header border-bottom">
+    <h5 class="offcanvas-title text-primary fw-bold">ระบบติดตามกำไร กบข.</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+  </div>
+  <div class="offcanvas-body">
+    <div class="nav flex-column">
+      <a href="#member" class="nav-link admin-only py-3 border-bottom text-dark" data-bs-dismiss="offcanvas"><i class="bi bi-people me-2"></i> จัดการสมาชิก</a>
+      <a href="#setting" class="nav-link superadmin-only py-3 border-bottom text-dark" data-bs-dismiss="offcanvas"><i class="bi bi-gear me-2"></i> ตั้งค่าระบบ</a>
+      <a href="#" class="nav-link text-danger py-3" onclick="doLogout()"><i class="bi bi-box-arrow-right me-2"></i> ออกจากระบบ</a>
+    </div>
+  </div>
+</div>
+
+<script>
+function toggleMobileMenu() {
+  const bsOffcanvas = new bootstrap.Offcanvas('#mobileMenu');
+  bsOffcanvas.toggle();
+}
+</script>
