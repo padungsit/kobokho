@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ระบบติดตามกำไร กบข.</title>
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Bootstrap 5 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Bootstrap Icons -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+  <!-- DataTables CSS -->
+  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
+  <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.bootstrap5.min.css">
+  <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.bootstrap5.min.css">
+  <!-- SweetAlert2 CSS -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.20/dist/sweetalert2.min.css">
+  <!-- Animate.css -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+
+  <?!= include('CSS'); ?>
+</head>
+<body class="bg-light">
+
+  <div id="app" style="display: none;">
+    <?!= include('Sidebar'); ?>
+    
+    <div id="main-content" class="main-content">
+      <?!= include('Navbar'); ?>
+      
+      <div class="container-fluid py-4" id="view-container">
+        <!-- Views will be loaded here -->
+      </div>
+      
+      <?!= include('Footer'); ?>
+    </div>
+  </div>
+  
+  <div id="login-container">
+    <?!= include('Login'); ?>
+  </div>
+
+  <div id="register-container" style="display: none;">
+    <?!= include('RegisterView'); ?>
+  </div>
+
+  <!-- Loading Overlay -->
+  <div id="global-loader" class="d-none justify-content-center align-items-center position-fixed top-0 start-0 w-100 h-100 bg-white bg-opacity-75" style="z-index: 9999;">
+    <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+      <span class="visually-hidden">กำลังโหลด...</span>
+    </div>
+  </div>
+
+  <!-- Hidden Views -->
+  <div id="templates" style="display: none;">
+    <div id="tpl-dashboard"><?!= include('DashboardView'); ?></div>
+    <div id="tpl-upload"><?!= include('UploadView'); ?></div>
+    <div id="tpl-data"><?!= include('Data'); ?></div>
+    <div id="tpl-member"><?!= include('Member'); ?></div>
+    <div id="tpl-setting"><?!= include('SettingView'); ?></div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+  <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+  <script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
+  <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.bootstrap5.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/pdfmake.min.js"></script>
+  <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
+  <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.print.min.js"></script>
+  <script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
+  <script src="https://cdn.datatables.net/responsive/2.5.0/js/responsive.bootstrap5.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.20/dist/sweetalert2.all.min.js"></script>
+  
+  <!-- Member Modal (Root Level to prevent backdrop overlay bug) -->
+  <div class="modal fade" id="memberModal" tabindex="-1" style="z-index: 1060;">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header border-0 pb-0">
+          <h5 class="modal-title fw-bold">ข้อมูลสมาชิก</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <form id="member-form" onsubmit="saveMember(event)">
+            <input type="hidden" id="m-id">
+            <div class="mb-3">
+              <label class="form-label small">Username</label>
+              <input type="text" class="form-control" id="m-username" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label small">รหัสผ่าน (เว้นว่างถ้าไม่เปลี่ยน)</label>
+              <input type="password" class="form-control" id="m-password">
+            </div>
+            <div class="mb-3">
+              <label class="form-label small">ชื่อ-นามสกุล</label>
+              <input type="text" class="form-control" id="m-name" required>
+            </div>
+            <div class="row">
+              <div class="col-6 mb-3">
+                <label class="form-label small">สิทธิ์</label>
+                <select class="form-select" id="m-role">
+                  <option value="User">สมาชิก</option>
+                  <option value="Admin">ผู้ดูแลระบบ</option>
+                  <option value="SuperAdmin">ผู้ดูแลระบบสูงสุด</option>
+                </select>
+              </div>
+              <div class="col-6 mb-3">
+                <label class="form-label small">สถานะ</label>
+                <select class="form-select" id="m-status">
+                  <option value="Active">เปิดใช้งาน</option>
+                  <option value="Inactive">ปิดใช้งาน</option>
+                </select>
+              </div>
+            </div>
+            <div class="text-end mt-3">
+              <button type="button" class="btn btn-light" data-bs-dismiss="modal">ยกเลิก</button>
+              <button type="submit" class="btn btn-primary px-4">บันทึก</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Snapshot Modal -->
+  <div class="modal fade" id="snapshotModal" tabindex="-1" style="z-index: 1060;">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header border-0 pb-0">
+          <h5 class="modal-title fw-bold text-primary"><i class="bi bi-pencil-square me-2"></i>แก้ไขข้อมูล กบข.</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <form id="edit-snapshot-form" onsubmit="saveEditSnapshot(event)">
+            <input type="hidden" id="edit-snap-id">
+            <div class="mb-3">
+              <label class="form-label small text-muted">วันที่ข้อมูล</label>
+              <input type="date" class="form-control" id="edit-snap-date" required>
+            </div>
+            
+            <h6 class="mt-3 mb-2 text-primary border-bottom pb-1">เงินสมาชิก</h6>
+            <div class="row">
+              <div class="col-6 mb-3">
+                <label class="form-label small text-muted">เงินต้นสมาชิก</label>
+                <input type="number" step="0.01" class="form-control edit-calc-trigger" id="edit-snap-mem-prin" required>
+              </div>
+              <div class="col-6 mb-3">
+                <label class="form-label small text-muted">ผลประโยชน์สมาชิก</label>
+                <input type="number" step="0.01" class="form-control edit-calc-trigger" id="edit-snap-mem-ben" required>
+              </div>
+            </div>
+            
+            <h6 class="mt-3 mb-2 text-primary border-bottom pb-1">เงินภาครัฐ</h6>
+            <div class="row">
+              <div class="col-6 mb-3">
+                <label class="form-label small text-muted">เงินต้นภาครัฐ</label>
+                <input type="number" step="0.01" class="form-control edit-calc-trigger" id="edit-snap-gov-prin" required>
+              </div>
+              <div class="col-6 mb-3">
+                <label class="form-label small text-muted">ผลประโยชน์ภาครัฐ</label>
+                <input type="number" step="0.01" class="form-control edit-calc-trigger" id="edit-snap-gov-ben" required>
+              </div>
+            </div>
+            
+            <div class="mb-3">
+              <label class="form-label small text-muted fw-bold">ยอดเงินรวมทั้งหมด</label>
+              <input type="number" step="0.01" class="form-control fw-bold text-success bg-light" id="edit-snap-total" readonly>
+            </div>
+            
+            <div class="text-end mt-4">
+              <button type="button" class="btn btn-light" data-bs-dismiss="modal">ยกเลิก</button>
+              <button type="submit" class="btn btn-primary px-4"><i class="bi bi-save me-1"></i>บันทึกการแก้ไข</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <?!= include('JS'); ?>
+
+</body>
+</html>

@@ -1,5 +1,5 @@
 function doGet(e) {
-  const template = HtmlService.createTemplateFromFile('Index');
+  const template = HtmlService.createTemplateFromFile('GASIndex');
   template.url = ScriptApp.getService().getUrl();
   return template.evaluate()
     .setTitle('ระบบติดตามกำไร กบข.')

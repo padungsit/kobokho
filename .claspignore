@@ -10,4 +10,4 @@
 
 # Explicitly ignore compiled files and utility scripts
 compiler.js
-github_index.html
+index.html

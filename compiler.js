@@ -2,8 +2,8 @@ const fs = require('fs');
 const path = require('path');
 
 const srcDir = __dirname;
-const indexFile = path.join(srcDir, 'Index.html');
-const outFile = path.join(srcDir, 'github_index.html');
+const indexFile = path.join(srcDir, 'GASIndex.html');
+const outFile = path.join(srcDir, 'index.html');
 
 console.log('Compiling HTML files...');
 
