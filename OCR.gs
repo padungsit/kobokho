@@ -41,24 +41,32 @@ function extractGPFData(text) {
 
   const getNumbersInSubstring = (sub) => {
     if (!sub) return [];
-    const matches = sub.match(/[\d,]+\.\d{2}/g) || [];
-    return matches.map(m => parseFloat(m.replace(/,/g, '')) || 0);
+    // Match numbers with optional decimal places (e.g. 195,279.80, 195279.8, 210501)
+    const matches = sub.match(/[\d,]+(?:\.\d{1,2})?/g) || [];
+    return matches
+      .map(m => parseFloat(m.replace(/,/g, '')) || 0)
+      .filter(n => n >= 100); // Filter out percentages like 20.8%, 16.4%, 30.2%, 32.6% or page numbers
   };
 
   // Split into Member and Gov parts based on headers
   let memberPart = '';
   let govPart = '';
 
-  const memberStartIdx = normalizedText.search(/(?:เงินสะสมของท่าน|สะสมของท่าน|สะสมของ ท่า|สะสม ของท่าน)/i);
-  const govStartIdx = normalizedText.search(/(?:เงินจากภาครัฐ|จากภาครัฐ|เงินภาครัฐ|เงิน จากภาครัฐ|เงินจาก ภาครัฐ)/i);
+  const memberStartIdx = normalizedText.search(/(?:เงินสะสมของท่าน|สะสมของท่าน|สะสมของ ท่า|สะสม ของท่าน|เงินสะสม)/i);
+  const govStartIdx = normalizedText.search(/(?:เงินจากภาครัฐ|จากภาครัฐ|เงินภาครัฐ|เงิน จากภาครัฐ|เงินจาก ภาครัฐ|ภาครัฐ)/i);
 
-  if (memberStartIdx !== -1) {
-    if (govStartIdx !== -1 && govStartIdx > memberStartIdx) {
+  if (memberStartIdx !== -1 && govStartIdx !== -1) {
+    if (memberStartIdx < govStartIdx) {
       memberPart = normalizedText.substring(memberStartIdx, govStartIdx);
       govPart = normalizedText.substring(govStartIdx);
     } else {
+      govPart = normalizedText.substring(govStartIdx, memberStartIdx);
       memberPart = normalizedText.substring(memberStartIdx);
     }
+  } else if (memberStartIdx !== -1) {
+    memberPart = normalizedText.substring(memberStartIdx);
+  } else if (govStartIdx !== -1) {
+    govPart = normalizedText.substring(govStartIdx);
   } else {
     // Fallback: search globally if we couldn't split
     memberPart = normalizedText;
@@ -67,39 +75,25 @@ function extractGPFData(text) {
   const memberNumbers = getNumbersInSubstring(memberPart);
   const govNumbers = getNumbersInSubstring(govPart);
 
-  // In Member Part:
-  // Index 0: Total (e.g. 298,496.81)
-  // Index 1: Principal (e.g. 195,279.80)
-  // Index 2: Benefit (e.g. 103,217.01)
-  let memberPrincipal = 0;
-  let memberBenefit = 0;
-  
-  if (memberNumbers.length >= 3) {
-    memberPrincipal = memberNumbers[1];
-    memberBenefit = memberNumbers[2];
-  } else if (memberNumbers.length === 2) {
-    memberPrincipal = memberNumbers[0];
-    memberBenefit = memberNumbers[1];
-  } else if (memberNumbers.length === 1) {
-    memberPrincipal = memberNumbers[0];
-  }
+  // Helper to extract Principal and Benefit from a list of numbers
+  const parsePair = (nums) => {
+    let principal = 0;
+    let benefit = 0;
+    if (nums.length >= 3) {
+      // Index 0: Total, Index 1: Principal, Index 2: Benefit
+      principal = nums[1];
+      benefit = nums[2];
+    } else if (nums.length === 2) {
+      principal = nums[0];
+      benefit = nums[1];
+    } else if (nums.length === 1) {
+      principal = nums[0];
+    }
+    return { principal, benefit };
+  };
 
-  // In Gov Part:
-  // Index 0: Total (e.g. 341,935.89)
-  // Index 1: Principal (e.g. 210,501.00)
-  // Index 2: Benefit (e.g. 131,434.89)
-  let govPrincipal = 0;
-  let govBenefit = 0;
-  
-  if (govNumbers.length >= 3) {
-    govPrincipal = govNumbers[1];
-    govBenefit = govNumbers[2];
-  } else if (govNumbers.length === 2) {
-    govPrincipal = govNumbers[0];
-    govBenefit = govNumbers[1];
-  } else if (govNumbers.length === 1) {
-    govPrincipal = govNumbers[0];
-  }
+  const memberRes = parsePair(memberNumbers);
+  const govRes = parsePair(govNumbers);
 
   // Attempt to parse Date (e.g., DD/MM/YYYY)
   let dateStr = new Date().toISOString().split('T')[0];
@@ -116,9 +110,9 @@ function extractGPFData(text) {
 
   return {
     Date: dateStr,
-    MemberPrincipal: memberPrincipal,
-    MemberBenefit: memberBenefit,
-    GovPrincipal: govPrincipal,
-    GovBenefit: govBenefit
+    MemberPrincipal: memberRes.principal,
+    MemberBenefit: memberRes.benefit,
+    GovPrincipal: govRes.principal,
+    GovBenefit: govRes.benefit
   };
 }

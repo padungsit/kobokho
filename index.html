@@ -206,7 +206,9 @@ function toggleMobileMenu() {
           <span class="user-name-display fw-semibold">ผู้ใช้งาน</span>
         </a>
         <ul class="dropdown-menu dropdown-menu-end shadow border-0">
-          <li><a class="dropdown-item" href="#" onclick="doLogout()"><i class="bi bi-box-arrow-right me-2"></i>ออกจากระบบ</a></li>
+          <li><a class="dropdown-item" href="#" onclick="showChangePasswordModal()"><i class="bi bi-key me-2"></i>เปลี่ยนรหัสผ่าน</a></li>
+          <li><hr class="dropdown-divider"></li>
+          <li><a class="dropdown-item text-danger" href="#" onclick="doLogout()"><i class="bi bi-box-arrow-right me-2"></i>ออกจากระบบ</a></li>
         </ul>
       </div>
     </div>
@@ -1366,6 +1368,38 @@ function saveSettingsForm(e) {
     </div>
   </div>
 
+  <!-- Change Password Modal -->
+  <div class="modal fade" id="changePasswordModal" tabindex="-1" style="z-index: 1060;">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header border-0 pb-0">
+          <h5 class="modal-title fw-bold">เปลี่ยนรหัสผ่าน</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <form id="change-pwd-form" onsubmit="doChangePassword(event)">
+            <div class="mb-3">
+              <label class="form-label small">รหัสผ่านเดิม</label>
+              <input type="password" class="form-control" id="pwd-old" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label small">รหัสผ่านใหม่</label>
+              <input type="password" class="form-control" id="pwd-new" required minlength="4">
+            </div>
+            <div class="mb-3">
+              <label class="form-label small">ยืนยันรหัสผ่านใหม่</label>
+              <input type="password" class="form-control" id="pwd-confirm" required minlength="4">
+            </div>
+            <div class="text-end mt-3">
+              <button type="button" class="btn btn-light" data-bs-dismiss="modal">ยกเลิก</button>
+              <button type="submit" class="btn btn-primary px-4">บันทึก</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script>
   // Polyfill google.script.run for running outside Google Apps Script (e.g. GitHub Pages)
   if (typeof google === 'undefined' || !google.script || !google.script.run) {
@@ -1584,6 +1618,41 @@ function saveSettingsForm(e) {
         showAlert('ข้อผิดพลาด', res.message, 'error');
       }
     }).registerUser({Name: name, Username: user, Password: pass});
+  }
+
+  function showChangePasswordModal() {
+    $('#change-pwd-form')[0].reset();
+    const modalEl = document.getElementById('changePasswordModal');
+    const modalInstance = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+    modalInstance.show();
+  }
+
+  function doChangePassword(e) {
+    e.preventDefault();
+    const oldPwd = $('#pwd-old').val();
+    const newPwd = $('#pwd-new').val();
+    const confirmPwd = $('#pwd-confirm').val();
+
+    if (newPwd !== confirmPwd) {
+      return showAlert('ข้อผิดพลาด', 'รหัสผ่านใหม่และการยืนยันรหัสผ่านไม่ตรงกัน', 'error');
+    }
+
+    showLoader();
+    google.script.run.withSuccessHandler(function(res) {
+      hideLoader();
+      if (res.success) {
+        const modalEl = document.getElementById('changePasswordModal');
+        const modalInstance = bootstrap.Modal.getInstance(modalEl);
+        if (modalInstance) modalInstance.hide();
+
+        showAlert('สำเร็จ', res.message || 'เปลี่ยนรหัสผ่านสำเร็จเรียบร้อยแล้ว', 'success');
+      } else {
+        showAlert('ข้อผิดพลาด', res.message, 'error');
+      }
+    }).withFailureHandler(function(err) {
+      hideLoader();
+      showAlert('ข้อผิดพลาดระบบ', err.message || 'ไม่สามารถเปลี่ยนรหัสผ่านได้', 'error');
+    }).changeMyPassword(currentToken, oldPwd, newPwd);
   }
 </script>
 

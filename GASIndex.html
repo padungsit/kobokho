@@ -186,6 +186,38 @@
     </div>
   </div>
 
+  <!-- Change Password Modal -->
+  <div class="modal fade" id="changePasswordModal" tabindex="-1" style="z-index: 1060;">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header border-0 pb-0">
+          <h5 class="modal-title fw-bold">เปลี่ยนรหัสผ่าน</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <form id="change-pwd-form" onsubmit="doChangePassword(event)">
+            <div class="mb-3">
+              <label class="form-label small">รหัสผ่านเดิม</label>
+              <input type="password" class="form-control" id="pwd-old" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label small">รหัสผ่านใหม่</label>
+              <input type="password" class="form-control" id="pwd-new" required minlength="4">
+            </div>
+            <div class="mb-3">
+              <label class="form-label small">ยืนยันรหัสผ่านใหม่</label>
+              <input type="password" class="form-control" id="pwd-confirm" required minlength="4">
+            </div>
+            <div class="text-end mt-3">
+              <button type="button" class="btn btn-light" data-bs-dismiss="modal">ยกเลิก</button>
+              <button type="submit" class="btn btn-primary px-4">บันทึก</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <?!= include('JS'); ?>
 
 </body>

@@ -93,3 +93,34 @@ function registerUser(userData) {
   logAction(userData.Username, 'User', 'Register', 'Success', 'User registered');
   return { success: true };
 }
+
+function changeMyPassword(token, oldPassword, newPassword) {
+  const auth = checkAuth(token);
+  if (!auth.success) throw new Error("Unauthorized");
+  
+  if (!oldPassword || !newPassword) {
+    return { success: false, message: "กรุณากรอกรหัสผ่านเดิมและรหัสผ่านใหม่" };
+  }
+  
+  const db = getDb();
+  const sheet = db.getSheetByName('USERS');
+  const data = sheet.getDataRange().getValues();
+  const rowIndex = data.findIndex(r => r[0] === auth.user.UserID);
+  
+  if (rowIndex <= 0) {
+    return { success: false, message: "ไม่พบข้อมูลผู้ใช้งาน" };
+  }
+  
+  const currentHash = data[rowIndex][2];
+  const oldHash = bytesToHex(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, oldPassword, Utilities.Charset.UTF_8));
+  
+  if (currentHash !== oldHash) {
+    return { success: false, message: "รหัสผ่านเดิมไม่ถูกต้อง" };
+  }
+  
+  const newHash = bytesToHex(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, newPassword, Utilities.Charset.UTF_8));
+  sheet.getRange(rowIndex + 1, 3).setValue(newHash);
+  
+  logAction(auth.user.Username, 'User', 'ChangePassword', 'Success', 'Password changed');
+  return { success: true, message: "เปลี่ยนรหัสผ่านสำเร็จเรียบร้อยแล้ว" };
+}

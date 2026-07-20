@@ -217,4 +217,39 @@
       }
     }).registerUser({Name: name, Username: user, Password: pass});
   }
+
+  function showChangePasswordModal() {
+    $('#change-pwd-form')[0].reset();
+    const modalEl = document.getElementById('changePasswordModal');
+    const modalInstance = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+    modalInstance.show();
+  }
+
+  function doChangePassword(e) {
+    e.preventDefault();
+    const oldPwd = $('#pwd-old').val();
+    const newPwd = $('#pwd-new').val();
+    const confirmPwd = $('#pwd-confirm').val();
+
+    if (newPwd !== confirmPwd) {
+      return showAlert('ข้อผิดพลาด', 'รหัสผ่านใหม่และการยืนยันรหัสผ่านไม่ตรงกัน', 'error');
+    }
+
+    showLoader();
+    google.script.run.withSuccessHandler(function(res) {
+      hideLoader();
+      if (res.success) {
+        const modalEl = document.getElementById('changePasswordModal');
+        const modalInstance = bootstrap.Modal.getInstance(modalEl);
+        if (modalInstance) modalInstance.hide();
+
+        showAlert('สำเร็จ', res.message || 'เปลี่ยนรหัสผ่านสำเร็จเรียบร้อยแล้ว', 'success');
+      } else {
+        showAlert('ข้อผิดพลาด', res.message, 'error');
+      }
+    }).withFailureHandler(function(err) {
+      hideLoader();
+      showAlert('ข้อผิดพลาดระบบ', err.message || 'ไม่สามารถเปลี่ยนรหัสผ่านได้', 'error');
+    }).changeMyPassword(currentToken, oldPwd, newPwd);
+  }
 </script>
