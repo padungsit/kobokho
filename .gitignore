@@ -1,0 +1,7 @@
+# Ignore all files by default to keep backend code private
+*
+
+# Allow only public static entry files for GitHub Pages
+!index.html
+!README.md
+!.gitignore
