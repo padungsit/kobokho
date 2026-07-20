@@ -36,81 +36,57 @@ function parseOCR(base64Image) {
 }
 
 function extractGPFData(text) {
-  const lines = text.split(/\r?\n/);
-  let currentContext = 'NONE'; // 'MEMBER' or 'GOV'
-  
-  let memberNumbers = [];
-  let govNumbers = [];
-  
-  lines.forEach(line => {
-    const trimmed = line.trim();
-    if (!trimmed) return;
-    
-    // Check for explicit section header matches
-    // Note: Use 'จากภาครัฐ' or 'เงินจากภาครัฐ' to avoid matching 'หน่วยงานภาครัฐ' in disclaimer text
-    if (/(?:เงินสะสมของท่าน|สะสมของท่าน|สะสมของ ท่า|สะสม ของท่าน|เงินสะสม)/i.test(trimmed)) {
-      currentContext = 'MEMBER';
-    } else if (/(?:เงินจากภาครัฐ|เงินจาก ภาครัฐ|เงินภาครัฐ|จากภาครัฐ)/i.test(trimmed)) {
-      currentContext = 'GOV';
-    }
-    
-    // Extract numbers in this line
-    const matches = trimmed.match(/[\d,]+(?:\.\d{1,2})?/g) || [];
-    const nums = matches
-      .map(m => parseFloat(m.replace(/,/g, '')) || 0)
-      .filter(n => n >= 100); // Filter out percentages (e.g. 20.8%, 16.4%, 30.2%, 32.6%)
-      
-    if (nums.length > 0 && currentContext !== 'NONE') {
-      if (currentContext === 'MEMBER') {
-        memberNumbers.push(...nums);
-      } else if (currentContext === 'GOV') {
-        govNumbers.push(...nums);
-      }
-    }
-  });
+  // Extract all numbers >= 100
+  const matches = text.match(/[\d,]+(?:\.\d{1,2})?/g) || [];
+  const numbers = matches
+    .map(m => parseFloat(m.replace(/,/g, '')) || 0)
+    .filter(n => n >= 100);
 
-  // Fallback: If line-by-line yielded empty, attempt global substring search
-  if (memberNumbers.length === 0 && govNumbers.length === 0) {
-    const normalizedText = text.replace(/[ \t]+/g, ' ');
-    const memberStartIdx = normalizedText.search(/(?:เงินสะสมของท่าน|สะสมของท่าน|เงินสะสม)/i);
-    const govStartIdx = normalizedText.search(/(?:เงินจากภาครัฐ|เงินจาก ภาครัฐ|เงินภาครัฐ|จากภาครัฐ)/i);
-    
-    const getNums = (sub) => {
-      if (!sub) return [];
-      const m = sub.match(/[\d,]+(?:\.\d{1,2})?/g) || [];
-      return m.map(v => parseFloat(v.replace(/,/g, '')) || 0).filter(n => n >= 100);
-    };
+  let memberPrincipal = 0;
+  let memberBenefit = 0;
+  let govPrincipal = 0;
+  let govBenefit = 0;
 
-    if (memberStartIdx !== -1 && govStartIdx !== -1) {
-      if (memberStartIdx < govStartIdx) {
-        memberNumbers = getNums(normalizedText.substring(memberStartIdx, govStartIdx));
-        govNumbers = getNums(normalizedText.substring(govStartIdx));
-      } else {
-        govNumbers = getNums(normalizedText.substring(govStartIdx, memberStartIdx));
-        memberNumbers = getNums(normalizedText.substring(memberStartIdx));
-      }
+  // Find all valid (Total, Principal, Benefit) triplets in sequence
+  // Mathematical rule: P + B approx equals T (within 1.0 margin)
+  const triplets = [];
+  for (let i = 0; i < numbers.length - 2; i++) {
+    const t = numbers[i];
+    const p = numbers[i + 1];
+    const b = numbers[i + 2];
+    if (Math.abs((p + b) - t) < 1.0 && p > 0 && b > 0) {
+      triplets.push({ total: t, principal: p, benefit: b });
     }
   }
 
-  // Helper to extract Principal and Benefit from a list of numbers
-  const parsePair = (nums) => {
-    let principal = 0;
-    let benefit = 0;
-    if (nums.length >= 3) {
-      // Index 0: Total, Index 1: Principal, Index 2: Benefit
-      principal = nums[1];
-      benefit = nums[2];
-    } else if (nums.length === 2) {
-      principal = nums[0];
-      benefit = nums[1];
-    } else if (nums.length === 1) {
-      principal = nums[0];
+  if (triplets.length >= 2) {
+    // First triplet is Member, Second triplet is Gov
+    memberPrincipal = triplets[0].principal;
+    memberBenefit = triplets[0].benefit;
+    govPrincipal = triplets[1].principal;
+    govBenefit = triplets[1].benefit;
+  } else if (triplets.length === 1) {
+    memberPrincipal = triplets[0].principal;
+    memberBenefit = triplets[0].benefit;
+  } else {
+    // Fallback: If no triplets matched (e.g. totals omitted), use positional sequence indexing
+    if (numbers.length >= 7) {
+      memberPrincipal = numbers[2];
+      memberBenefit = numbers[3];
+      govPrincipal = numbers[5];
+      govBenefit = numbers[6];
+    } else if (numbers.length === 6) {
+      memberPrincipal = numbers[1];
+      memberBenefit = numbers[2];
+      govPrincipal = numbers[4];
+      govBenefit = numbers[5];
+    } else if (numbers.length === 4) {
+      memberPrincipal = numbers[0];
+      memberBenefit = numbers[1];
+      govPrincipal = numbers[2];
+      govBenefit = numbers[3];
     }
-    return { principal, benefit };
-  };
-
-  const memberRes = parsePair(memberNumbers);
-  const govRes = parsePair(govNumbers);
+  }
 
   // Attempt to parse Date (e.g., DD/MM/YYYY)
   let dateStr = new Date().toISOString().split('T')[0];
@@ -127,9 +103,9 @@ function extractGPFData(text) {
 
   return {
     Date: dateStr,
-    MemberPrincipal: memberRes.principal,
-    MemberBenefit: memberRes.benefit,
-    GovPrincipal: govRes.principal,
-    GovBenefit: govRes.benefit
+    MemberPrincipal: memberPrincipal,
+    MemberBenefit: memberBenefit,
+    GovPrincipal: govPrincipal,
+    GovBenefit: govBenefit
   };
 }
