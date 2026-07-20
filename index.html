@@ -572,7 +572,7 @@ function renderCharts(data, kpi) {
   mainChartObj = new Chart(ctxMain, {
     type: 'line',
     data: {
-      labels: data.map(d => new Date(d.date).toLocaleDateString('th-TH')),
+      labels: data.map(d => formatDateThai(d.date)),
       datasets: [{
         label: 'ยอดเงินรวม',
         data: data.map(d => d.totalAmount),
@@ -891,7 +891,15 @@ function renderDataTables(data) {
   dtData = $('#dataTable').DataTable({
     data: data,
     columns: [
-      { data: 'Date', render: function(data) { return formatDateThai(data); } },
+      { 
+        data: 'Date', 
+        render: function(data, type) { 
+          if (type === 'sort' || type === 'type') {
+            return data;
+          }
+          return formatDateThai(data); 
+        } 
+      },
       { data: 'TotalAmount', render: $.fn.dataTable.render.number(',', '.', 2, '') },
       { data: 'TotalPrincipal', render: $.fn.dataTable.render.number(',', '.', 2, '') },
       { data: 'TotalBenefit', render: $.fn.dataTable.render.number(',', '.', 2, '') },
