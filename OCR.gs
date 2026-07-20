@@ -36,44 +36,61 @@ function parseOCR(base64Image) {
 }
 
 function extractGPFData(text) {
-  // Clean up spaces to make keyword matching easier, but keep newlines
-  const normalizedText = text.replace(/[ \t]+/g, ' ');
-
-  const getNumbersInSubstring = (sub) => {
-    if (!sub) return [];
-    // Match numbers with optional decimal places (e.g. 195,279.80, 195279.8, 210501)
-    const matches = sub.match(/[\d,]+(?:\.\d{1,2})?/g) || [];
-    return matches
-      .map(m => parseFloat(m.replace(/,/g, '')) || 0)
-      .filter(n => n >= 100); // Filter out percentages like 20.8%, 16.4%, 30.2%, 32.6% or page numbers
-  };
-
-  // Split into Member and Gov parts based on headers
-  let memberPart = '';
-  let govPart = '';
-
-  const memberStartIdx = normalizedText.search(/(?:เงินสะสมของท่าน|สะสมของท่าน|สะสมของ ท่า|สะสม ของท่าน|เงินสะสม)/i);
-  const govStartIdx = normalizedText.search(/(?:เงินจากภาครัฐ|จากภาครัฐ|เงินภาครัฐ|เงิน จากภาครัฐ|เงินจาก ภาครัฐ|ภาครัฐ)/i);
-
-  if (memberStartIdx !== -1 && govStartIdx !== -1) {
-    if (memberStartIdx < govStartIdx) {
-      memberPart = normalizedText.substring(memberStartIdx, govStartIdx);
-      govPart = normalizedText.substring(govStartIdx);
-    } else {
-      govPart = normalizedText.substring(govStartIdx, memberStartIdx);
-      memberPart = normalizedText.substring(memberStartIdx);
+  const lines = text.split(/\r?\n/);
+  let currentContext = 'NONE'; // 'MEMBER' or 'GOV'
+  
+  let memberNumbers = [];
+  let govNumbers = [];
+  
+  lines.forEach(line => {
+    const trimmed = line.trim();
+    if (!trimmed) return;
+    
+    // Check for explicit section header matches
+    // Note: Use 'จากภาครัฐ' or 'เงินจากภาครัฐ' to avoid matching 'หน่วยงานภาครัฐ' in disclaimer text
+    if (/(?:เงินสะสมของท่าน|สะสมของท่าน|สะสมของ ท่า|สะสม ของท่าน|เงินสะสม)/i.test(trimmed)) {
+      currentContext = 'MEMBER';
+    } else if (/(?:เงินจากภาครัฐ|เงินจาก ภาครัฐ|เงินภาครัฐ|จากภาครัฐ)/i.test(trimmed)) {
+      currentContext = 'GOV';
     }
-  } else if (memberStartIdx !== -1) {
-    memberPart = normalizedText.substring(memberStartIdx);
-  } else if (govStartIdx !== -1) {
-    govPart = normalizedText.substring(govStartIdx);
-  } else {
-    // Fallback: search globally if we couldn't split
-    memberPart = normalizedText;
-  }
+    
+    // Extract numbers in this line
+    const matches = trimmed.match(/[\d,]+(?:\.\d{1,2})?/g) || [];
+    const nums = matches
+      .map(m => parseFloat(m.replace(/,/g, '')) || 0)
+      .filter(n => n >= 100); // Filter out percentages (e.g. 20.8%, 16.4%, 30.2%, 32.6%)
+      
+    if (nums.length > 0 && currentContext !== 'NONE') {
+      if (currentContext === 'MEMBER') {
+        memberNumbers.push(...nums);
+      } else if (currentContext === 'GOV') {
+        govNumbers.push(...nums);
+      }
+    }
+  });
 
-  const memberNumbers = getNumbersInSubstring(memberPart);
-  const govNumbers = getNumbersInSubstring(govPart);
+  // Fallback: If line-by-line yielded empty, attempt global substring search
+  if (memberNumbers.length === 0 && govNumbers.length === 0) {
+    const normalizedText = text.replace(/[ \t]+/g, ' ');
+    const memberStartIdx = normalizedText.search(/(?:เงินสะสมของท่าน|สะสมของท่าน|เงินสะสม)/i);
+    const govStartIdx = normalizedText.search(/(?:เงินจากภาครัฐ|เงินจาก ภาครัฐ|เงินภาครัฐ|จากภาครัฐ)/i);
+    
+    const getNums = (sub) => {
+      if (!sub) return [];
+      const m = sub.match(/[\d,]+(?:\.\d{1,2})?/g) || [];
+      return m.map(v => parseFloat(v.replace(/,/g, '')) || 0).filter(n => n >= 100);
+    };
+
+    if (memberStartIdx !== -1 && govStartIdx !== -1) {
+      if (memberStartIdx < govStartIdx) {
+        memberNumbers = getNums(normalizedText.substring(memberStartIdx, govStartIdx));
+        govNumbers = getNums(normalizedText.substring(govStartIdx));
+      } else {
+        govNumbers = getNums(normalizedText.substring(govStartIdx, memberStartIdx));
+        memberNumbers = getNums(normalizedText.substring(memberStartIdx));
+      }
+    }
+  }
 
   // Helper to extract Principal and Benefit from a list of numbers
   const parsePair = (nums) => {
@@ -97,7 +114,7 @@ function extractGPFData(text) {
 
   // Attempt to parse Date (e.g., DD/MM/YYYY)
   let dateStr = new Date().toISOString().split('T')[0];
-  const dateMatch = normalizedText.match(/(\d{2})[\/\-\.](\d{2})[\/\-\.](\d{4})/);
+  const dateMatch = text.match(/(\d{2})[\/\-\.](\d{2})[\/\-\.](\d{4})/);
   if (dateMatch) {
     let day = parseInt(dateMatch[1]);
     let month = parseInt(dateMatch[2]);
